@@ -3,16 +3,33 @@
 	import { goto } from '$app/navigation';
 	import { user, authInitialized } from '$lib/stores/auth';
 	import { onMount } from 'svelte';
+	import { page } from '$app/stores';
+
+	interface Bookshelf {
+		id: string;
+		name: string;
+		color?: string;
+	}
 
 	let title = '';
 	let author = '';
 	let coverUrl = '';
 	let status = 'want_to_read';
+	let bookshelfId = '';
+	let bookshelves: Bookshelf[] = [];
 	let error = '';
 	let loading = false;
 
+	$: selectedBookshelf = $page.url.searchParams.get('bookshelf');
+
     onMount(async () => {
         await waitForAuth();
+        await fetchBookshelves();
+        
+        // Set bookshelf if provided in URL
+        if (selectedBookshelf) {
+            bookshelfId = selectedBookshelf;
+        }
     })
     async function waitForAuth() {
 		// Check if auth is already initialized
@@ -29,6 +46,22 @@
 				}
 			});
 		});
+	}
+
+	async function fetchBookshelves() {
+		if (!$user) return;
+
+		const { data, error: fetchError } = await supabase
+			.from('bookshelves')
+			.select('id, name')
+			.eq('user_id', $user.id)
+			.order('name');
+
+		if (fetchError) {
+			console.error('Error fetching bookshelves:', fetchError);
+		} else {
+			bookshelves = data || [];
+		}
 	}
 
 	async function handleSubmit() {
@@ -52,13 +85,19 @@
 					title,
 					author,
 					cover_url: coverUrl || null,
-					status
+					status,
+					bookshelf_id: bookshelfId || null
 				}
 			]);
 
 			if (insertError) throw insertError;
 
-			goto('/library');
+			// Redirect to bookshelf if specified, otherwise to library
+			if (bookshelfId) {
+				goto(`/bookshelves/${bookshelfId}`);
+			} else {
+				goto('/library');
+			}
 		} catch (error) {
 			console.error('Error adding book:', error)
 		} finally {
@@ -108,6 +147,21 @@
 				<option value="currently_reading">Currently Reading</option>
 				<option value="finished">Finished</option>
 			</select>
+		</div>
+
+		<div class="form-group">
+			<label for="bookshelf">Bookshelf (optional)</label>
+			<select id="bookshelf" bind:value={bookshelfId}>
+				<option value="">No bookshelf</option>
+				{#each bookshelves as bookshelf}
+					<option value={bookshelf.id}>{bookshelf.name}</option>
+				{/each}
+			</select>
+			{#if bookshelves.length === 0}
+				<p class="help-text">
+					<a href="/bookshelves/add">Create your first bookshelf</a> to organize your books
+				</p>
+			{/if}
 		</div>
 
 		<div class="button-group">
@@ -208,5 +262,20 @@
 		padding: 0.75rem;
 		border-radius: 4px;
 		margin-bottom: 1rem;
+	}
+
+	.help-text {
+		margin: 0.5rem 0 0 0;
+		font-size: 0.9rem;
+		color: #666;
+	}
+
+	.help-text a {
+		color: #667eea;
+		text-decoration: none;
+	}
+
+	.help-text a:hover {
+		text-decoration: underline;
 	}
 </style>

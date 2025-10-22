@@ -22,6 +22,11 @@
 				<p>View and manage your book collection</p>
 			</a>
 			
+			<a href="/bookshelves" class="action-card">
+				<h3>📖 Bookshelves</h3>
+				<p>Organize books into custom shelves</p>
+			</a>
+			
 			<a href="/books/add" class="action-card">
 				<h3>➕ Add Book</h3>
 				<p>Add a new book to your library</p>

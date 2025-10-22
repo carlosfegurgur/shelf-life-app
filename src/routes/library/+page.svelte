@@ -12,6 +12,10 @@
 		cover_url?: string;
 		user_id: string;
 		created_at: string;
+		bookshelf_id?: string;
+		bookshelf?: {
+			name: string;
+		};
 	}
 
 	let books: Book[] = [];
@@ -59,7 +63,10 @@
 		loading = true;
 		const { data, error } = await supabase
 			.from('books')
-			.select('*')
+			.select(`
+				*,
+				bookshelf:bookshelves(name)
+			`)
 			.eq('user_id', $user.id)
 			.order('created_at', { ascending: false });
 
@@ -120,6 +127,11 @@
 					<div class="book-info">
 						<h3>{book.title}</h3>
 						<p class="author">{book.author}</p>
+						{#if book.bookshelf}
+							<div class="bookshelf-tag" style="--shelf-color: '#667eea'}">
+								{book.bookshelf.name}
+							</div>
+						{/if}
 						{#if book.rating}
 							<div class="rating">
 								{'⭐'.repeat(book.rating)}
@@ -251,6 +263,17 @@
 		color: #666;
 		font-size: 0.9rem;
 		margin: 0;
+	}
+
+	.bookshelf-tag {
+		display: inline-block;
+		background: var(--shelf-color);
+		color: white;
+		padding: 0.25rem 0.5rem;
+		border-radius: 4px;
+		font-size: 0.8rem;
+		font-weight: 500;
+		margin: 0.5rem 0;
 	}
 
 	.rating {

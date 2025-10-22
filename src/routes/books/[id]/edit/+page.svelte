@@ -18,9 +18,17 @@
 		notes?: string;
 		start_date?: string;
 		finish_date?: string;
+		bookshelf_id?: string;
+	}
+
+	interface Bookshelf {
+		id: string;
+		name: string;
+		color?: string;
 	}
 
 	let book: Book | null = null;
+	let bookshelves: Bookshelf[] = [];
 	let loading = true;
 	let error = '';
 	let saving = false;
@@ -33,7 +41,8 @@
 		cover_url: '',
 		notes: '',
 		start_date: '',
-		finish_date: ''
+		finish_date: '',
+		bookshelf_id: ''
 	};
 
 	$: bookId = $page.params.id;
@@ -42,6 +51,7 @@
 		// Wait for authentication to be initialized
 		await waitForAuth();
 		await fetchBook();
+		await fetchBookshelves();
 	});
 
 	async function waitForAuth() {
@@ -59,6 +69,22 @@
 				}
 			});
 		});
+	}
+
+	async function fetchBookshelves() {
+		if (!$user) return;
+
+		const { data, error: fetchError } = await supabase
+			.from('bookshelves')
+			.select('id, name, color')
+			.eq('user_id', $user.id)
+			.order('name');
+
+		if (fetchError) {
+			console.error('Error fetching bookshelves:', fetchError);
+		} else {
+			bookshelves = data || [];
+		}
 	}
 
 	async function fetchBook() {
@@ -91,7 +117,8 @@
 					cover_url: book.cover_url || '',
 					notes: book.notes || '',
 					start_date: book.start_date || '',
-					finish_date: book.finish_date || ''
+					finish_date: book.finish_date || '',
+					bookshelf_id: book.bookshelf_id || ''
 				};
 			}
 		}
@@ -121,6 +148,7 @@
 					notes: form.notes || null,
 					start_date: form.start_date || null,
 					finish_date: form.finish_date || null,
+					bookshelf_id: form.bookshelf_id || null,
 					updated_at: new Date().toISOString()
 				})
 				.eq('id', book.id)
@@ -237,6 +265,21 @@
 				</div>
 
 				<div class="form-group">
+					<label for="bookshelf">Bookshelf</label>
+					<select id="bookshelf" bind:value={form.bookshelf_id}>
+						<option value="">No bookshelf</option>
+						{#each bookshelves as bookshelf}
+							<option value={bookshelf.id}>{bookshelf.name}</option>
+						{/each}
+					</select>
+					{#if bookshelves.length === 0}
+						<p class="help-text">
+							<a href="/bookshelves/add">Create your first bookshelf</a> to organize your books
+						</p>
+					{/if}
+				</div>
+
+				<div class="form-group">
 					<label for="notes">Notes</label>
 					<textarea id="notes" bind:value={form.notes} rows="4" placeholder="Add your thoughts about this book..."></textarea>
 				</div>
@@ -267,6 +310,21 @@
 	.error h2 {
 		color: #c33;
 		margin-bottom: 1rem;
+	}
+
+	.help-text {
+		margin: 0.5rem 0 0 0;
+		font-size: 0.9rem;
+		color: #666;
+	}
+
+	.help-text a {
+		color: #667eea;
+		text-decoration: none;
+	}
+
+	.help-text a:hover {
+		text-decoration: underline;
 	}
 
 	.edit-page {

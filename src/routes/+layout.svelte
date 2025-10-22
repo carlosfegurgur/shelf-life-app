@@ -32,6 +32,7 @@
 				<div class="nav-links">
 					<a href="/">Dashboard</a>
 					<a href="/library">Library</a>
+					<a href="/bookshelves">Bookshelves</a>
 					<a href="/books/add">Add Book</a>
 					<a href="/profile">Profile</a>
 					<button on:click={handleLogout}>Logout</button>
