@@ -4,6 +4,8 @@
 	import { user, authInitialized } from '$lib/stores/auth';
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
+	import BookSearchModal from '$lib/components/BookSearchModal.svelte';
+	import type { BookSearchResult } from '$lib/types/openLibrary.types';
 
 	interface Bookshelf {
 		id: string;
@@ -11,6 +13,7 @@
 		color?: string;
 	}
 
+	let showSearchModal = false;
 	let title = '';
 	let author = '';
 	let coverUrl = '';
@@ -20,23 +23,30 @@
 	let error = '';
 	let loading = false;
 
+	// Pre-fill form when book is selected from search
+	function handleBookSelect(book: BookSearchResult) {
+		title = book.title;
+		author = book.author;
+		coverUrl = book.coverUrl || '';
+	}
+
 	$: selectedBookshelf = $page.url.searchParams.get('bookshelf');
 
-    onMount(async () => {
-        await waitForAuth();
-        await fetchBookshelves();
-        
-        // Set bookshelf if provided in URL
-        if (selectedBookshelf) {
-            bookshelfId = selectedBookshelf;
-        }
-    })
-    async function waitForAuth() {
+	onMount(async () => {
+		await waitForAuth();
+		await fetchBookshelves();
+
+		// Set bookshelf if provided in URL
+		if (selectedBookshelf) {
+			bookshelfId = selectedBookshelf;
+		}
+	});
+	async function waitForAuth() {
 		// Check if auth is already initialized
 		if ($authInitialized) {
 			return;
 		}
-		
+
 		// Wait for authentication to be initialized
 		return new Promise<void>((resolve) => {
 			const unsubscribe = authInitialized.subscribe((initialized) => {
@@ -65,7 +75,7 @@
 	}
 
 	async function handleSubmit() {
-        if (!$user) {
+		if (!$user) {
 			console.error('User not authenticated');
 			loading = false;
 			return;
@@ -99,7 +109,7 @@
 				goto('/library');
 			}
 		} catch (error) {
-			console.error('Error adding book:', error)
+			console.error('Error adding book:', error);
 		} finally {
 			loading = false;
 		}
@@ -108,6 +118,12 @@
 
 <div class="container">
 	<h1>Add New Book</h1>
+	<div class="add-options">
+		<button class="search-btn" on:click={() => (showSearchModal = true)}>
+			🔍 Search Open Library
+		</button>
+		<span class="or">or add manually below</span>
+	</div>
 
 	{#if error}
 		<div class="error">{error}</div>
@@ -172,6 +188,8 @@
 		</div>
 	</form>
 </div>
+
+<BookSearchModal bind:isOpen={showSearchModal} onSelect={handleBookSelect} />
 
 <style>
 	.container {
