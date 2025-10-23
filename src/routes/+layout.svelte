@@ -4,6 +4,7 @@
 	import { user, authInitialized, initAuth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
 	import { supabase } from '$lib/supabaseClient';
+	import '../lib/global.css';
 
 	onMount(() => {
 		initAuth();
@@ -53,7 +54,7 @@
 	}
 
 	nav {
-		background: white;
+		background: var(--white);
 		border-bottom: 1px solid #e0e0e0;
 		padding: 1rem 0;
 	}
