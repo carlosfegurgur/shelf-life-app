@@ -9,7 +9,6 @@
 		id: string;
 		name: string;
 		description?: string;
-		color?: string;
 		user_id: string;
 		created_at: string;
 		updated_at?: string;
@@ -28,19 +27,6 @@
 
 	$: bookshelfId = $page.params.id;
 
-	const colorOptions = [
-		{ value: '#667eea', name: 'Blue' },
-		{ value: '#f093fb', name: 'Pink' },
-		{ value: '#4facfe', name: 'Light Blue' },
-		{ value: '#43e97b', name: 'Green' },
-		{ value: '#fa709a', name: 'Coral' },
-		{ value: '#ffecd2', name: 'Peach' },
-		{ value: '#a8edea', name: 'Mint' },
-		{ value: '#d299c2', name: 'Purple' },
-		{ value: '#fad0c4', name: 'Rose' },
-		{ value: '#ff9a9e', name: 'Salmon' }
-	];
-
 	onMount(async () => {
 		await waitForAuth();
 		await fetchBookshelf();
@@ -50,7 +36,7 @@
 		if ($authInitialized) {
 			return;
 		}
-		
+
 		return new Promise<void>((resolve) => {
 			const unsubscribe = authInitialized.subscribe((initialized) => {
 				if (initialized) {
@@ -86,7 +72,7 @@
 				form = {
 					name: bookshelf.name,
 					description: bookshelf.description || '',
-					color: bookshelf.color || '#667eea'
+					color: '#667eea'
 				};
 			}
 		}
@@ -110,7 +96,6 @@
 				.update({
 					name: form.name.trim(),
 					description: form.description.trim() || null,
-					color: form.color,
 					updated_at: new Date().toISOString()
 				})
 				.eq('id', bookshelf.id)
@@ -130,7 +115,11 @@
 	async function deleteBookshelf() {
 		if (!bookshelf || !$user) return;
 
-		if (!confirm('Are you sure you want to delete this bookshelf? All books in this shelf will be moved to "No Shelf". This action cannot be undone.')) {
+		if (
+			!confirm(
+				'Are you sure you want to delete this bookshelf? All books in this shelf will be moved to "No Shelf". This action cannot be undone.'
+			)
+		) {
 			return;
 		}
 
@@ -179,11 +168,11 @@
 		<form on:submit|preventDefault={handleSubmit} class="bookshelf-form">
 			<div class="form-group">
 				<label for="name">Bookshelf Name *</label>
-				<input 
-					id="name" 
-					type="text" 
-					bind:value={form.name} 
-					required 
+				<input
+					id="name"
+					type="text"
+					bind:value={form.name}
+					required
 					placeholder="e.g., Fantasy Novels, Work Reading, etc."
 					disabled={saving}
 				/>
@@ -191,31 +180,13 @@
 
 			<div class="form-group">
 				<label for="description">Description</label>
-				<textarea 
-					id="description" 
-					bind:value={form.description} 
+				<textarea
+					id="description"
+					bind:value={form.description}
 					placeholder="Optional description for this bookshelf..."
 					rows="3"
 					disabled={saving}
 				></textarea>
-			</div>
-
-			<div class="form-group">
-				<label>Color Theme</label>
-				<div class="color-picker">
-					{#each colorOptions as option}
-						<label class="color-option" style="--color: {option.value}">
-							<input 
-								type="radio" 
-								bind:group={form.color} 
-								value={option.value}
-								disabled={saving}
-							/>
-							<span class="color-circle" style="background: {option.value}"></span>
-							<span class="color-name">{option.name}</span>
-						</label>
-					{/each}
-				</div>
 			</div>
 
 			<div class="form-actions">
@@ -223,7 +194,12 @@
 					Delete Bookshelf
 				</button>
 				<div class="form-actions-right">
-					<button type="button" class="cancel-btn" on:click={() => goto(`/bookshelves/${bookshelfId}`)} disabled={saving}>
+					<button
+						type="button"
+						class="cancel-btn"
+						on:click={() => goto(`/bookshelves/${bookshelfId}`)}
+						disabled={saving}
+					>
 						Cancel
 					</button>
 					<button type="submit" class="submit-btn" disabled={saving || !form.name.trim()}>
@@ -235,7 +211,7 @@
 
 		<div class="preview">
 			<h3>Preview</h3>
-			<div class="bookshelf-preview" style="--shelf-color: {form.color}">
+			<div class="bookshelf-preview">
 				<div class="preview-header">
 					<h4>{form.name || 'Bookshelf Name'}</h4>
 					{#if form.description}
@@ -335,7 +311,8 @@
 		color: #333;
 	}
 
-	input, textarea {
+	input,
+	textarea {
 		width: 100%;
 		padding: 0.75rem;
 		border: 2px solid #e0e0e0;
@@ -345,12 +322,14 @@
 		box-sizing: border-box;
 	}
 
-	input:focus, textarea:focus {
+	input:focus,
+	textarea:focus {
 		outline: none;
 		border-color: #667eea;
 	}
 
-	input:disabled, textarea:disabled {
+	input:disabled,
+	textarea:disabled {
 		background: #f5f5f5;
 		color: #999;
 	}
@@ -378,14 +357,16 @@
 		background: #f9f9f9;
 	}
 
-	.color-option input[type="radio"] {
+	.color-option input[type='radio'] {
 		width: auto;
 		margin: 0;
 	}
 
-	.color-option input[type="radio"]:checked + .color-circle {
+	.color-option input[type='radio']:checked + .color-circle {
 		transform: scale(1.2);
-		box-shadow: 0 0 0 2px white, 0 0 0 4px var(--color);
+		box-shadow:
+			0 0 0 2px white,
+			0 0 0 4px var(--color);
 	}
 
 	.color-circle {
@@ -488,7 +469,11 @@
 	}
 
 	.preview-header {
-		background: linear-gradient(135deg, var(--shelf-color), color-mix(in srgb, var(--shelf-color) 80%, white));
+		background: linear-gradient(
+			135deg,
+			var(--shelf-color),
+			color-mix(in srgb, var(--shelf-color) 80%, white)
+		);
 		color: white;
 		padding: 1rem;
 	}

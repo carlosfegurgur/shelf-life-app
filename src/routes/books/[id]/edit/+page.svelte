@@ -76,7 +76,7 @@
 
 		const { data, error: fetchError } = await supabase
 			.from('bookshelves')
-			.select('id, name, color')
+			.select('id, name')
 			.eq('user_id', $user.id)
 			.order('name');
 
