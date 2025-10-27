@@ -2,11 +2,12 @@
 	import { onMount } from 'svelte';
 	import { user } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
+    import RegisterPage from '$lib/components/RegisterPage.svelte';
 
 	onMount(() => {
 		// Redirect to login if not authenticated
 		if (!$user) {
-			goto('/login');
+			goto('/');
 		}
 	});
 </script>
@@ -34,9 +35,7 @@
 		</div>
 	</div>
 {:else}
-	<div class="loading">
-		<p>Loading...</p>
-	</div>
+	<RegisterPage />
 {/if}
 
 <style>
@@ -82,8 +81,4 @@
 		color: #666;
 	}
 
-	.loading {
-		text-align: center;
-		padding: 2rem;
-	}
 </style>
