@@ -1,3 +1,50 @@
 :root {
-    --white: red;
+    --bg: #FFFFFF;
+    --bg-hover: #F5F5F5;
+    --bg-secondary: #F5F5F5;
+    --bg-secondary-hover: #E6E6E6;
+    --bg-tertiary: #D9D9D9;
+    --bg-tertiary-hover: #B3B3B3;
+
+    --bg-neutral: #5A5A5A;
+    --bg-neutral-hover: #434343;
+    --bg-neutral-secondary: #CDCDCD;
+    --bg-neutral-secondary-hover: #B2B2B2;
+    --bg-neutral-tertiary: #E3E3E3;
+    --bg-neutral-tertiary-hover: #CDCDCD;
+    
+    --bg-brand: #2C2C2C;
+    --bg-brand-hover: #1E1E1E;
+    --bg-brand-secondary: #E6E6E6;
+    --bg-brand-secondary-hover: #B2B2B2;
+    --bg-brand-tertiary: #F5F5F5;
+    --bg-brand-tertiary-hover: #E6E6E6;
+
+    --text: #1E1E1E;
+    --text-secondary: #757575;
+    --text-tertiary: #B3B3B3;
+
+    /* --text-neutral:
+    --text-neutral-hover:
+    --text-neutral-secondary:
+    --text-neutral-secondary-hover:
+    --text-neutral-tertiary:
+    --text-neutral-tertiary-hover:
+    
+    --text-brand:
+    --text-brand-hover:
+    --text-brand-secondary:
+    --text-brand-secondary-hover:
+    --text-brand-tertiary:
+    --text-brand-tertiary-hover: */
+
+    --max-width: 1200px;
+    --header-size-lg: 72px;
+    --header-size: 48px;
+
+    * {
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
+    }
 }

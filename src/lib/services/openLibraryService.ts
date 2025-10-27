@@ -2,7 +2,7 @@
 import type { 
     OpenLibrarySearchResult, 
     OpenLibraryWork,
-    OpenLibraryAuthor,
+    // OpenLibraryAuthor,
     BookSearchResult, 
     OpenLibraryBook
   } from '$lib/types/openLibrary.types'
@@ -23,6 +23,7 @@ import type {
         if (!response.ok) throw new Error('Search failed')
         
         const data: OpenLibrarySearchResult = await response.json()
+        console.log('book data', data);
         
         return data.docs.map(book => this.transformBook(book))
       } catch (error) {
@@ -85,13 +86,6 @@ import type {
      */
     static getCoverUrl(coverId: number, size: 'S' | 'M' | 'L' = 'M'): string {
       return `${COVERS_URL}/id/${coverId}-${size}.jpg`
-    }
-
-    /**
-     * Get Author
-     */
-    static getAuthor(name: OpenLibraryAuthor): string {
-      return `${name}`
     }
   
     /**
