@@ -2,12 +2,14 @@
 	let {
 		href,
 		variant,
-        disabled,
+		disabled,
+		onclick,
 		children
 	}: {
 		href?: string;
 		variant: string;
-        disabled?: boolean;
+		disabled?: boolean;
+		onclick?: () => void;
 		children: any;
 	} = $props();
 </script>
@@ -17,24 +19,29 @@
 		{@render children()}
 	</a>
 {:else}
-	<button class="btn btn-{variant}">
+	<button class="btn btn-{variant}" {disabled} {onclick}>
 		{@render children()}
 	</button>
 {/if}
 
 <style>
 	.btn {
-		padding: 1rem;
+		padding: 0.75rem 1rem;
 		border: none;
 		border-radius: 0.5rem;
 		font-size: 16px;
 		text-decoration: none;
 		font-family: Arial, Helvetica, sans-serif;
+		cursor: pointer;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		gap: 0.5rem;
 	}
 
 	.btn-primary {
 		background-color: var(--bg-brand);
-		color: var(--bg-brand-secondary);
+		color: var(--bg-secondary);
 	}
 
 	.btn-primary:hover {
@@ -43,10 +50,19 @@
 
 	.btn-secondary {
 		background-color: var(--bg-brand-secondary);
-		color: var(--bg-brand);
+		color: var(--text);
 	}
 
 	.btn-secondary:hover {
 		background-color: var(--bg-brand-secondary-hover);
+	}
+
+	.btn-tertiary {
+		background-color: var(--bg-brand-tertiary);
+		color: var(--text);
+	}
+
+	.btn-tertiary:hover {
+		background-color: var(--bg-brand-tertiary-hover);
 	}
 </style>

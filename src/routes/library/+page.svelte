@@ -2,6 +2,8 @@
 	import { onMount } from 'svelte';
 	import { supabase } from '$lib/supabaseClient';
 	import { user, authInitialized } from '$lib/stores/auth';
+	import Button from '$lib/components/Button.svelte';
+	import { Plus } from '@lucide/svelte';
 
 	interface Book {
 		id: string;
@@ -82,72 +84,75 @@
 </script>
 
 <div class="container">
-	<div class="header">
-		<h1>My Library</h1>
-		<a href="/books/add" class="add-btn">+ Add Book</a>
-	</div>
-
-	<div class="shelves">
-		{#each Object.entries(shelves) as [key, label]}
-			<button
-				class="shelf-btn"
-				class:active={activeShelf === key}
-				on:click={() => (activeShelf = key)}
-			>
-				{label}
-				{#if key !== 'all'}
-					<span class="count">
-						({books.filter((b) => b.status === key).length})
-					</span>
-				{/if}
-			</button>
-		{/each}
-	</div>
-
-	{#if loading}
-		<p class="loading">Loading your books...</p>
-	{:else if filteredBooks.length === 0}
-		<div class="empty-state">
-			<p>No books in this shelf yet.</p>
-			<a href="/books/add">Add your first book</a>
+	
+		<div class="header">
+			<h1>My Library</h1>
+			<Button variant="primary" href="/books/add"><Plus /> Add a Book</Button>
 		</div>
-	{:else}
-		<div class="book-grid">
-			{#each filteredBooks as book (book.id)}
-				<a href="/books/{book.id}" class="book-card">
-					<div class="book-cover">
-						{#if book.cover_url}
-							<img src={book.cover_url} alt={book.title} />
-						{:else}
-							<div class="placeholder-cover">
-								<span>📖</span>
-							</div>
-						{/if}
-					</div>
-					<div class="book-info">
-						<h3>{book.title}</h3>
-						<p class="author">{book.author}</p>
-						{#if book.bookshelf}
-							<div class="bookshelf-tag" style="--shelf-color: '#667eea'}">
-								{book.bookshelf.name}
-							</div>
-						{/if}
-						{#if book.rating}
-							<div class="rating">
-								{'⭐'.repeat(book.rating)}
-							</div>
-						{/if}
-					</div>
-				</a>
+	
+		<div class="shelves">
+			{#each Object.entries(shelves) as [key, label]}
+				<button
+					class="shelf-btn"
+					class:active={activeShelf === key}
+					on:click={() => (activeShelf = key)}
+				>
+					{label}
+					{#if key !== 'all'}
+						<span class="count">
+							({books.filter((b) => b.status === key).length})
+						</span>
+					{/if}
+				</button>
 			{/each}
 		</div>
-	{/if}
+	
+		{#if loading}
+			<p class="loading">Loading your books...</p>
+		{:else if filteredBooks.length === 0}
+			<div class="empty-state">
+				<p>No books in this shelf yet.</p>
+				<a href="/books/add">Add your first book</a>
+			</div>
+		{:else}
+			<div class="book-grid">
+				{#each filteredBooks as book (book.id)}
+					<a href="/books/{book.id}" class="book-card">
+						<div class="book-cover">
+							{#if book.cover_url}
+								<img src={book.cover_url} alt={book.title} />
+							{:else}
+								<div class="placeholder-cover">
+									<span>📖</span>
+								</div>
+							{/if}
+						</div>
+						<div class="book-info">
+							<h3>{book.title}</h3>
+							<p class="author">{book.author}</p>
+							{#if book.bookshelf}
+								<div class="bookshelf-tag" style="--shelf-color: '#667eea'}">
+									{book.bookshelf.name}
+								</div>
+							{/if}
+							{#if book.rating}
+								<div class="rating">
+									{'⭐'.repeat(book.rating)}
+								</div>
+							{/if}
+						</div>
+					</a>
+				{/each}
+			</div>
+		{/if}
+	
 </div>
 
 <style>
 	.container {
-		max-width: 1200px;
+		max-width: var(--max-width);
 		margin: 0 auto;
+		padding: 2rem;
 	}
 
 	.header {

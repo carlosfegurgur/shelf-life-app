@@ -33,21 +33,22 @@
 {#if $authInitialized && $user}
 	<nav>
 		<div class="nav-container">
-			<a href="/" class="mobile-logo"><MobileIcon /></a>
-			<a href="/" class="desktop-logo"><DesktopIcon /></a>
+			<a href="/" class="mobile-logo"><MobileIcon height={40} width={"auto"} /></a>
+			<a href="/" class="desktop-logo"><DesktopIcon height={40} width={"auto"} /></a>
+
 			<div class="nav-links">
-				{#each NavLinks as navlink}
+				<!-- {#each NavLinks as navlink}
 					<a href={navlink.url}>{navlink.title}</a>
-				{/each}
-				<button on:click={handleLogout}>Logout</button>
+				{/each} -->
+				<Button onclick={handleLogout} variant="primary">Logout</Button>
 			</div>
 		</div>
 	</nav>
 {:else}
 	<nav>
 		<div class="nav-container">
-			<a href="/" class="mobile-logo"><MobileIcon /></a>
-			<a href="/" class="desktop-logo"><DesktopIcon /></a>
+			<a href="/" class="mobile-logo"><MobileIcon height={40} width={"auto"} /></a>
+			<a href="/" class="desktop-logo"><DesktopIcon height={40} width={"auto"} /></a>
 
 			<div class="nav-links">
 				<Button href="/signup" variant="primary">Register</Button>
@@ -63,9 +64,9 @@
 	}
 
 	.nav-container {
-		max-width: 1200px;
+		max-width: var(--max-width);
 		margin: 0 auto;
-		padding: 1rem 2rem;
+		padding: 2rem;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
@@ -79,16 +80,6 @@
 		display: flex;
 		gap: 1rem;
 		align-items: center;
-	}
-
-	.nav-links button {
-		background: #f44336;
-		color: white;
-		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 4px;
-		cursor: pointer;
-		font-weight: 500;
 	}
 
 	@media only screen and (min-width: 48rem) {
