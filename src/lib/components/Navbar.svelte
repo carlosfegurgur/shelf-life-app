@@ -33,8 +33,8 @@
 {#if $authInitialized && $user}
 	<nav>
 		<div class="nav-container">
-			<a href="/" class="mobile-logo"><MobileIcon height={40} width={"auto"} /></a>
-			<a href="/" class="desktop-logo"><DesktopIcon height={40} width={"auto"} /></a>
+			<a href="/" class="mobile-logo"><MobileIcon height={40} width={100} /></a>
+			<a href="/" class="desktop-logo"><DesktopIcon height={40} width={100} /></a>
 
 			<div class="nav-links">
 				<!-- {#each NavLinks as navlink}
@@ -47,8 +47,8 @@
 {:else}
 	<nav>
 		<div class="nav-container">
-			<a href="/" class="mobile-logo"><MobileIcon height={40} width={"auto"} /></a>
-			<a href="/" class="desktop-logo"><DesktopIcon height={40} width={"auto"} /></a>
+			<a href="/" class="mobile-logo"><MobileIcon height={40} width={100} /></a>
+			<a href="/" class="desktop-logo"><DesktopIcon height={40} width={100} /></a>
 
 			<div class="nav-links">
 				<Button href="/signup" variant="primary">Register</Button>
