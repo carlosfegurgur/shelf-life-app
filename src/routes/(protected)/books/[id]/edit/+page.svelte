@@ -1,39 +1,21 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { page } from '$app/stores';
-	import { supabase } from '$lib/supabaseClient';
-	import { user, authInitialized } from '$lib/stores/auth';
+	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import type { Book, Bookshelf } from '$lib/types/types';
 
-	interface Book {
-		id: string;
-		title: string;
-		author: string;
-		status: 'want_to_read' | 'currently_reading' | 'finished';
-		rating?: number;
-		cover_url?: string;
-		user_id: string;
-		created_at: string;
-		updated_at?: string;
-		notes?: string;
-		start_date?: string;
-		finish_date?: string;
-		bookshelf_id?: string;
-	}
+	let book: Book | null = $state(null);
+	let bookshelves: Bookshelf[] = $state([]);
+	let loading = $state(true);
+	let error = $state('');
+	let saving = $state(false);
 
-	interface Bookshelf {
-		id: string;
-		name: string;
-		color?: string;
-	}
+	let { data } = $props();
+	let { user, supabase } = $derived(data);
 
-	let book: Book | null = null;
-	let bookshelves: Bookshelf[] = [];
-	let loading = true;
-	let error = '';
-	let saving = false;
+	let bookId = $derived(page.params.id);
 
-	let form = {
+	let form = $state({
 		title: '',
 		author: '',
 		status: 'want_to_read' as 'want_to_read' | 'currently_reading' | 'finished',
@@ -43,41 +25,20 @@
 		start_date: '',
 		finish_date: '',
 		bookshelf_id: ''
-	};
-
-	$: bookId = $page.params.id;
+	});
 
 	onMount(async () => {
-		// Wait for authentication to be initialized
-		await waitForAuth();
 		await fetchBook();
 		await fetchBookshelves();
 	});
 
-	async function waitForAuth() {
-		// Check if auth is already initialized
-		if ($authInitialized) {
-			return;
-		}
-		
-		// Wait for authentication to be initialized
-		return new Promise<void>((resolve) => {
-			const unsubscribe = authInitialized.subscribe((initialized) => {
-				if (initialized) {
-					unsubscribe();
-					resolve();
-				}
-			});
-		});
-	}
-
 	async function fetchBookshelves() {
-		if (!$user) return;
+		if (!user) return;
 
 		const { data, error: fetchError } = await supabase
 			.from('bookshelves')
 			.select('id, name')
-			.eq('user_id', $user.id)
+			.eq('user_id', user.id)
 			.order('name');
 
 		if (fetchError) {
@@ -88,7 +49,7 @@
 	}
 
 	async function fetchBook() {
-		if (!bookId || !$user) {
+		if (!bookId || !user) {
 			error = 'Book not found or user not authenticated';
 			loading = false;
 			return;
@@ -99,7 +60,7 @@
 			.from('books')
 			.select('*')
 			.eq('id', bookId)
-			.eq('user_id', $user.id)
+			.eq('user_id', user.id)
 			.single();
 
 		if (fetchError) {
@@ -126,7 +87,7 @@
 	}
 
 	async function handleSubmit() {
-		if (!book || !$user) return;
+		if (!book || !user) return;
 
 		if (!form.title || !form.author) {
 			error = 'Title and author are required';
@@ -152,7 +113,7 @@
 					updated_at: new Date().toISOString()
 				})
 				.eq('id', book.id)
-				.eq('user_id', $user.id);
+				.eq('user_id', user.id);
 
 			if (updateError) throw updateError;
 
@@ -166,7 +127,7 @@
 	}
 
 	async function deleteBook() {
-		if (!book || !$user) return;
+		if (!book || !user) return;
 
 		if (!confirm('Are you sure you want to delete this book? This action cannot be undone.')) {
 			return;
@@ -177,7 +138,7 @@
 				.from('books')
 				.delete()
 				.eq('id', book.id)
-				.eq('user_id', $user.id);
+				.eq('user_id', user.id);
 
 			if (deleteError) throw deleteError;
 
@@ -205,8 +166,8 @@
 			<div class="header">
 				<h1>Edit Book</h1>
 				<div class="actions">
-					<a href="/books/{book.id}" class="back-btn">← Back to Book</a>
-					<button on:click={deleteBook} class="delete-btn">Delete Book</button>
+					<!-- <a href="/books/{book.id}" class="back-btn">← Back to Book</a> -->
+					<button onclick={deleteBook} class="delete-btn">Delete Book</button>
 				</div>
 			</div>
 
@@ -214,7 +175,7 @@
 				<div class="error-message">{error}</div>
 			{/if}
 
-			<form on:submit|preventDefault={handleSubmit}>
+			<form onsubmit={handleSubmit}>
 				<div class="form-row">
 					<div class="form-group">
 						<label for="title">Title *</label>
@@ -288,7 +249,7 @@
 					<button type="submit" disabled={saving} class="save-btn">
 						{saving ? 'Saving...' : 'Save Changes'}
 					</button>
-					<a href="/books/{book.id}" class="cancel-btn">Cancel</a>
+					<!-- <a href="/books/{book.id}" class="cancel-btn">Cancel</a> -->
 				</div>
 			</form>
 		</div>
@@ -434,7 +395,7 @@
 		margin-top: 2rem;
 	}
 
-	.save-btn, .cancel-btn {
+	.save-btn {
 		padding: 0.75rem 1.5rem;
 		border-radius: 4px;
 		font-weight: 600;
@@ -457,16 +418,6 @@
 	.save-btn:disabled {
 		opacity: 0.6;
 		cursor: not-allowed;
-	}
-
-	.cancel-btn {
-		background: #f5f5f5;
-		color: #666;
-		border: 1px solid #ddd;
-	}
-
-	.cancel-btn:hover {
-		background: #e0e0e0;
 	}
 
 	@media (max-width: 768px) {

@@ -1,54 +1,31 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { page } from '$app/stores';
-	import { supabase } from '$lib/supabaseClient';
-	import { user, authInitialized } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import type { Bookshelf } from '$lib/types/types.js';
 
-	interface Bookshelf {
-		id: string;
-		name: string;
-		description?: string;
-		user_id: string;
-		created_at: string;
-		updated_at?: string;
-	}
+	let bookshelf: Bookshelf | null = $state(null);
+	let loading = $state(true);
+	let saving = $state(false);
+	let error = $state('');
 
-	let bookshelf: Bookshelf | null = null;
-	let loading = true;
-	let saving = false;
-	let error = '';
-
-	let form = {
+	let form = $state({
 		name: '',
 		description: '',
 		color: '#667eea'
-	};
+	});
 
-	$: bookshelfId = $page.params.id;
+	let { data } = $props();
+	let { user, supabase } = $derived(data);
+	let bookshelfId = $derived(page.params.id);
 
 	onMount(async () => {
-		await waitForAuth();
 		await fetchBookshelf();
 	});
 
-	async function waitForAuth() {
-		if ($authInitialized) {
-			return;
-		}
-
-		return new Promise<void>((resolve) => {
-			const unsubscribe = authInitialized.subscribe((initialized) => {
-				if (initialized) {
-					unsubscribe();
-					resolve();
-				}
-			});
-		});
-	}
 
 	async function fetchBookshelf() {
-		if (!bookshelfId || !$user) {
+		if (!bookshelfId || !user) {
 			error = 'Bookshelf not found or user not authenticated';
 			loading = false;
 			return;
@@ -59,7 +36,7 @@
 			.from('bookshelves')
 			.select('*')
 			.eq('id', bookshelfId)
-			.eq('user_id', $user.id)
+			.eq('user_id', user.id)
 			.single();
 
 		if (fetchError) {
@@ -80,7 +57,7 @@
 	}
 
 	async function handleSubmit() {
-		if (!bookshelf || !$user) return;
+		if (!bookshelf || !user) return;
 
 		if (!form.name.trim()) {
 			error = 'Bookshelf name is required';
@@ -99,7 +76,7 @@
 					updated_at: new Date().toISOString()
 				})
 				.eq('id', bookshelf.id)
-				.eq('user_id', $user.id);
+				.eq('user_id', user.id);
 
 			if (updateError) throw updateError;
 
@@ -113,7 +90,7 @@
 	}
 
 	async function deleteBookshelf() {
-		if (!bookshelf || !$user) return;
+		if (!bookshelf || !user) return;
 
 		if (
 			!confirm(
@@ -129,7 +106,7 @@
 				.from('books')
 				.update({ bookshelf_id: null })
 				.eq('bookshelf_id', bookshelf.id)
-				.eq('user_id', $user.id);
+				.eq('user_id', user.id);
 
 			if (updateBooksError) {
 				console.error('Error updating books:', updateBooksError);
@@ -140,7 +117,7 @@
 				.from('bookshelves')
 				.delete()
 				.eq('id', bookshelf.id)
-				.eq('user_id', $user.id);
+				.eq('user_id', user.id);
 
 			if (deleteError) throw deleteError;
 
@@ -165,7 +142,7 @@
 	{#if loading}
 		<p class="loading">Loading bookshelf...</p>
 	{:else if bookshelf}
-		<form on:submit|preventDefault={handleSubmit} class="bookshelf-form">
+		<form onsubmit={handleSubmit} class="bookshelf-form">
 			<div class="form-group">
 				<label for="name">Bookshelf Name *</label>
 				<input
@@ -190,14 +167,14 @@
 			</div>
 
 			<div class="form-actions">
-				<button type="button" class="delete-btn" on:click={deleteBookshelf} disabled={saving}>
+				<button type="button" class="delete-btn" onclick={deleteBookshelf} disabled={saving}>
 					Delete Bookshelf
 				</button>
 				<div class="form-actions-right">
 					<button
 						type="button"
 						class="cancel-btn"
-						on:click={() => goto(`/bookshelves/${bookshelfId}`)}
+						onclick={() => goto(`/bookshelves/${bookshelfId}`)}
 						disabled={saving}
 					>
 						Cancel
@@ -332,53 +309,6 @@
 	textarea:disabled {
 		background: #f5f5f5;
 		color: #999;
-	}
-
-	.color-picker {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-		gap: 0.75rem;
-		margin-top: 0.5rem;
-	}
-
-	.color-option {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.5rem;
-		border: 2px solid #e0e0e0;
-		border-radius: 6px;
-		cursor: pointer;
-		transition: all 0.2s;
-	}
-
-	.color-option:hover {
-		border-color: #ccc;
-		background: #f9f9f9;
-	}
-
-	.color-option input[type='radio'] {
-		width: auto;
-		margin: 0;
-	}
-
-	.color-option input[type='radio']:checked + .color-circle {
-		transform: scale(1.2);
-		box-shadow:
-			0 0 0 2px white,
-			0 0 0 4px var(--color);
-	}
-
-	.color-circle {
-		width: 20px;
-		height: 20px;
-		border-radius: 50%;
-		transition: transform 0.2s;
-	}
-
-	.color-name {
-		font-size: 0.9rem;
-		color: #666;
 	}
 
 	.form-actions {

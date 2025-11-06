@@ -1,57 +1,25 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { page } from '$app/stores';
-	import { supabase } from '$lib/supabaseClient';
-	import { user, authInitialized } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import type { Book } from '$lib/types/types.js';
 
-	interface Book {
-		id: string;
-		title: string;
-		author: string;
-		status: 'want_to_read' | 'currently_reading' | 'finished';
-		rating?: number;
-		cover_url?: string;
-		user_id: string;
-		created_at: string;
-		updated_at?: string;
-		notes?: string;
-		start_date?: string;
-		finish_date?: string;
-	}
+	let book: Book | null = $state(null);
+	let loading = $state(true);
+	let error = $state('');
 
-	let book: Book | null = null;
-	let loading = true;
-	let error = '';
+	let { data } = $props();
+	let { user, supabase } = $derived(data);
 
-	$: bookId = $page.params.id;
+	let bookId = $derived(page.params.id);
 
 	onMount(async () => {
-		// Wait for authentication to be initialized
-		await waitForAuth();
 		await fetchBook();
 	});
 
-	async function waitForAuth() {
-		// Check if auth is already initialized
-		if ($authInitialized) {
-			return;
-		}
-		
-		// Wait for authentication to be initialized
-		return new Promise<void>((resolve) => {
-			const unsubscribe = authInitialized.subscribe((initialized) => {
-				if (initialized) {
-					unsubscribe();
-					resolve();
-				}
-			});
-		});
-	}
-
 	async function fetchBook() {
-		if (!bookId || !$user) {
-			error = 'Book not found or user not authenticated';
+		if (!bookId) {
+			error = 'Book not found';
 			loading = false;
 			return;
 		}
@@ -61,7 +29,7 @@
 			.from('books')
 			.select('*')
 			.eq('id', bookId)
-			.eq('user_id', $user.id)
+			.eq('user_id', user.id)
 			.single();
 
 		if (fetchError) {
@@ -73,9 +41,8 @@
 		loading = false;
 	}
 
-
 	async function deleteBook() {
-		if (!book || !$user) return;
+		if (!book || !user) return;
 
 		if (!confirm('Are you sure you want to delete this book? This action cannot be undone.')) {
 			return;
@@ -85,7 +52,7 @@
 			.from('books')
 			.delete()
 			.eq('id', book.id)
-			.eq('user_id', $user.id);
+			.eq('user_id', user.id);
 
 		if (deleteError) {
 			error = 'Failed to delete book';
@@ -94,7 +61,6 @@
 			goto('/library');
 		}
 	}
-
 
 	function getStatusLabel(status: string) {
 		const labels: Record<string, string> = {
@@ -134,42 +100,44 @@
 						</div>
 					{/if}
 				</div>
-				
+
 				<div class="book-info">
 					<h1>{book.title}</h1>
 					<p class="author">by {book.author}</p>
-					
+
 					<div class="book-meta">
 						<div class="status">
-							<strong>Status:</strong> 
+							<strong>Status:</strong>
 							<span class="status-badge status-{book.status}">
 								{getStatusLabel(book.status)}
 							</span>
 						</div>
-						
+
 						{#if book.rating}
 							<div class="rating">
-								<strong>Rating:</strong> 
+								<strong>Rating:</strong>
 								<span class="stars">{'⭐'.repeat(book.rating)}</span>
 							</div>
 						{/if}
-						
+
 						{#if book.start_date}
 							<div class="date">
-								<strong>Started:</strong> {formatDate(book.start_date)}
+								<strong>Started:</strong>
+								{formatDate(book.start_date)}
 							</div>
 						{/if}
-						
+
 						{#if book.finish_date}
 							<div class="date">
-								<strong>Finished:</strong> {formatDate(book.finish_date)}
+								<strong>Finished:</strong>
+								{formatDate(book.finish_date)}
 							</div>
 						{/if}
 					</div>
-					
+
 					<div class="actions">
 						<a href="/books/{book.id}/edit" class="edit-btn">Edit Book</a>
-						<button on:click={deleteBook} class="delete-btn">Delete Book</button>
+						<button onclick={deleteBook} class="delete-btn">Delete Book</button>
 						<a href="/library" class="back-btn">← Back to Library</a>
 					</div>
 				</div>
@@ -181,7 +149,6 @@
 					<p class="notes">{book.notes}</p>
 				</div>
 			{/if}
-
 		</div>
 	{/if}
 </div>
@@ -193,7 +160,8 @@
 		padding: 2rem;
 	}
 
-	.loading, .error {
+	.loading,
+	.error {
 		text-align: center;
 		padding: 3rem;
 	}
@@ -301,7 +269,9 @@
 		flex-wrap: wrap;
 	}
 
-	.edit-btn, .delete-btn, .back-btn {
+	.edit-btn,
+	.delete-btn,
+	.back-btn {
 		padding: 0.75rem 1.5rem;
 		border-radius: 6px;
 		text-decoration: none;
@@ -355,23 +325,22 @@
 		margin: 0;
 	}
 
-
 	@media (max-width: 768px) {
 		.book-header {
 			flex-direction: column;
 			text-align: center;
 		}
-		
+
 		.book-cover {
 			width: 150px;
 			height: 225px;
 			margin: 0 auto;
 		}
-		
+
 		.form-row {
 			grid-template-columns: 1fr;
 		}
-		
+
 		.actions {
 			justify-content: center;
 		}

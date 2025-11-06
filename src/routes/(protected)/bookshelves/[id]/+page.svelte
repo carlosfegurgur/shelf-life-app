@@ -1,62 +1,25 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { page } from '$app/stores';
-	import { supabase } from '$lib/supabaseClient';
-	import { user, authInitialized } from '$lib/stores/auth';
-	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import type { Book, Bookshelf } from '$lib/types/types';
 
-	interface Bookshelf {
-		id: string;
-		name: string;
-		description?: string;
-		color?: string;
-		user_id: string;
-		created_at: string;
-		updated_at?: string;
-	}
+	let bookshelf: Bookshelf | null = $state(null);
+	let books: Book[] = $state([]);
+	let loading = $state(true);
+	let error = $state('');
 
-	interface Book {
-		id: string;
-		title: string;
-		author: string;
-		status: 'want_to_read' | 'currently_reading' | 'finished';
-		rating?: number;
-		cover_url?: string;
-		user_id: string;
-		created_at: string;
-		bookshelf_id?: string;
-	}
+	let { data } = $props();
+	let { user, supabase } = $derived(data);
 
-	let bookshelf: Bookshelf | null = null;
-	let books: Book[] = [];
-	let loading = true;
-	let error = '';
-
-	$: bookshelfId = $page.params.id;
+	let bookshelfId = $derived(page.params.id);
 
 	onMount(async () => {
-		await waitForAuth();
 		await fetchBookshelf();
 		await fetchBooks();
 	});
 
-	async function waitForAuth() {
-		if ($authInitialized) {
-			return;
-		}
-		
-		return new Promise<void>((resolve) => {
-			const unsubscribe = authInitialized.subscribe((initialized) => {
-				if (initialized) {
-					unsubscribe();
-					resolve();
-				}
-			});
-		});
-	}
-
 	async function fetchBookshelf() {
-		if (!bookshelfId || !$user) {
+		if (!bookshelfId || !user) {
 			error = 'Bookshelf not found or user not authenticated';
 			loading = false;
 			return;
@@ -66,7 +29,7 @@
 			.from('bookshelves')
 			.select('*')
 			.eq('id', bookshelfId)
-			.eq('user_id', $user.id)
+			.eq('user_id', user.id)
 			.single();
 
 		if (fetchError) {
@@ -78,7 +41,7 @@
 	}
 
 	async function fetchBooks() {
-		if (!bookshelfId || !$user) {
+		if (!bookshelfId || !user) {
 			loading = false;
 			return;
 		}
@@ -87,7 +50,7 @@
 		const { data, error } = await supabase
 			.from('books')
 			.select('*')
-			.eq('user_id', $user.id)
+			.eq('user_id', user.id)
 			.eq('bookshelf_id', bookshelfId)
 			.order('created_at', { ascending: false });
 
@@ -105,13 +68,13 @@
 				.from('books')
 				.update({ bookshelf_id: null })
 				.eq('id', bookId)
-				.eq('user_id', $user?.id);
+				.eq('user_id', user?.id);
 
 			if (updateError) {
 				console.error('Error removing book from shelf:', updateError);
 			} else {
 				// Remove from local array
-				books = books.filter(book => book.id !== bookId);
+				books = books.filter((book) => book.id !== bookId);
 			}
 		} catch (err) {
 			console.error('Error:', err);
@@ -128,13 +91,13 @@
 				.from('books')
 				.delete()
 				.eq('id', bookId)
-				.eq('user_id', $user?.id);
+				.eq('user_id', user?.id);
 
 			if (deleteError) {
 				console.error('Error deleting book:', deleteError);
 			} else {
 				// Remove from local array
-				books = books.filter(book => book.id !== bookId);
+				books = books.filter((book) => book.id !== bookId);
 			}
 		} catch (err) {
 			console.error('Error:', err);
@@ -178,7 +141,7 @@
 			<div class="books-header">
 				<h2>Books ({books.length})</h2>
 			</div>
-			
+
 			<div class="book-grid">
 				{#each books as book (book.id)}
 					<div class="book-card">
@@ -207,21 +170,17 @@
 								</div>
 							</div>
 						</a>
-						
+
 						<div class="book-actions">
 							<a href="/books/{book.id}/edit" class="edit-book-btn">Edit</a>
-							<button 
-								class="remove-btn" 
-								on:click={() => removeBookFromShelf(book.id)}
+							<button
+								class="remove-btn"
+								onclick={() => removeBookFromShelf(book.id)}
 								title="Remove from shelf"
 							>
 								Remove
 							</button>
-							<button 
-								class="delete-btn" 
-								on:click={() => deleteBook(book.id)}
-								title="Delete book"
-							>
+							<button class="delete-btn" onclick={() => deleteBook(book.id)} title="Delete book">
 								Delete
 							</button>
 						</div>
@@ -247,7 +206,11 @@
 	}
 
 	.bookshelf-header {
-		background: linear-gradient(135deg, var(--shelf-color), color-mix(in srgb, var(--shelf-color) 80%, white));
+		background: linear-gradient(
+			135deg,
+			var(--shelf-color),
+			color-mix(in srgb, var(--shelf-color) 80%, white)
+		);
 		color: white;
 		padding: 2rem;
 		border-radius: 12px;
@@ -388,7 +351,9 @@
 		border-radius: 12px;
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 		overflow: hidden;
-		transition: transform 0.2s, box-shadow 0.2s;
+		transition:
+			transform 0.2s,
+			box-shadow 0.2s;
 	}
 
 	.book-card:hover {
@@ -404,7 +369,7 @@
 
 	.book-cover {
 		aspect-ratio: 2/3;
-		background: #f5f5f5;
+		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -432,6 +397,7 @@
 		font-size: 1.1rem;
 		line-height: 1.3;
 		display: -webkit-box;
+		line-clamp: 2;
 		-webkit-line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
@@ -497,7 +463,8 @@
 		background: #f0f2ff;
 	}
 
-	.remove-btn, .delete-btn {
+	.remove-btn,
+	.delete-btn {
 		background: none;
 		border: none;
 		font-size: 0.8rem;

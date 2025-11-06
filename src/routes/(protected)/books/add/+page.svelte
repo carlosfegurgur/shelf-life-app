@@ -1,27 +1,25 @@
 <script lang="ts">
-	import { supabase } from '$lib/supabaseClient';
 	import { goto } from '$app/navigation';
-	import { user, authInitialized } from '$lib/stores/auth';
 	import { onMount } from 'svelte';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import BookSearchModal from '$lib/components/BookSearchModal.svelte';
 	import type { BookSearchResult } from '$lib/types/openLibrary.types';
+	import type { Bookshelf } from '$lib/types/types.js';
 
-	interface Bookshelf {
-		id: string;
-		name: string;
-		color?: string;
-	}
+	let showSearchModal = $state(false);
+	let title = $state('');
+	let author = $state('');
+	let coverUrl = $state('');
+	let status = $state('want_to_read');
+	let bookshelfId = $state('');
+	let bookshelves: Bookshelf[] = $state([]);
+	let error = $state('');
+	let loading = $state(false);
 
-	let showSearchModal = false;
-	let title = '';
-	let author = '';
-	let coverUrl = '';
-	let status = 'want_to_read';
-	let bookshelfId = '';
-	let bookshelves: Bookshelf[] = [];
-	let error = '';
-	let loading = false;
+	let { data } = $props();
+	let { user, supabase } = $derived(data);
+
+	let selectedBookshelf = $derived(page.url.searchParams.get('bookshelf'));
 
 	// Pre-fill form when book is selected from search
 	function handleBookSelect(book: BookSearchResult) {
@@ -30,43 +28,21 @@
 		coverUrl = book.coverUrl || '';
 	}
 
-	$: selectedBookshelf = $page.url.searchParams.get('bookshelf');
-
 	onMount(async () => {
-		await waitForAuth();
 		await fetchBookshelves();
-
 		// Set bookshelf if provided in URL
 		if (selectedBookshelf) {
 			bookshelfId = selectedBookshelf;
 		}
 	});
-	async function waitForAuth() {
-		// Check if auth is already initialized
-		if ($authInitialized) {
-			return;
-		}
-
-		// Wait for authentication to be initialized
-		return new Promise<void>((resolve) => {
-			const unsubscribe = authInitialized.subscribe((initialized) => {
-				if (initialized) {
-					unsubscribe();
-					resolve();
-				}
-			});
-		});
-	}
 
 	async function fetchBookshelves() {
-		if (!$user) return;
-
+		if (!user) return;
 		const { data, error: fetchError } = await supabase
 			.from('bookshelves')
 			.select('id, name')
-			.eq('user_id', $user.id)
+			.eq('user_id', user.id)
 			.order('name');
-
 		if (fetchError) {
 			console.error('Error fetching bookshelves:', fetchError);
 		} else {
@@ -75,23 +51,12 @@
 	}
 
 	async function handleSubmit() {
-		if (!$user) {
-			console.error('User not authenticated');
-			loading = false;
-			return;
-		}
-		if (!title || !author) {
-			error = 'Title and author are required';
-			return;
-		}
-
-		error = '';
 		loading = true;
 
 		try {
 			const { error: insertError } = await supabase.from('books').insert([
 				{
-					user_id: $user.id,
+					user_id: user.id,
 					title,
 					author,
 					cover_url: coverUrl || null,
@@ -119,7 +84,7 @@
 <div class="container">
 	<h1>Add New Book</h1>
 	<div class="add-options">
-		<button class="search-btn" on:click={() => (showSearchModal = true)}>
+		<button class="search-btn" onclick={() => (showSearchModal = true)}>
 			🔍 Search Open Library
 		</button>
 		<span class="or">or add manually below</span>
@@ -129,7 +94,7 @@
 		<div class="error">{error}</div>
 	{/if}
 
-	<form on:submit|preventDefault={handleSubmit}>
+	<form onsubmit={handleSubmit}>
 		<div class="form-group">
 			<label for="title">Title *</label>
 			<input id="title" type="text" bind:value={title} required placeholder="The Great Gatsby" />

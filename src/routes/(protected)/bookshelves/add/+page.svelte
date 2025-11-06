@@ -1,36 +1,16 @@
 <script lang="ts">
-	import { supabase } from '$lib/supabaseClient';
 	import { goto } from '$app/navigation';
-	import { user, authInitialized } from '$lib/stores/auth';
-	import { onMount } from 'svelte';
+	let name = $state('');
+	let description = $state('');
+	let color = $state('#667eea');
+	let error = $state('');
+	let loading = $state(false);
 
-	let name = '';
-	let description = '';
-	let color = '#667eea';
-	let error = '';
-	let loading = false;
-
-	onMount(async () => {
-		await waitForAuth();
-	});
-
-	async function waitForAuth() {
-		if ($authInitialized) {
-			return;
-		}
-		
-		return new Promise<void>((resolve) => {
-			const unsubscribe = authInitialized.subscribe((initialized) => {
-				if (initialized) {
-					unsubscribe();
-					resolve();
-				}
-			});
-		});
-	}
+	let { data } = $props();
+	let { user, supabase } = $derived(data);
 
 	async function handleSubmit() {
-		if (!$user) {
+		if (!user) {
 			console.error('User not authenticated');
 			loading = false;
 			return;
@@ -47,9 +27,9 @@
 		try {
 			const { error: insertError } = await supabase.from('bookshelves').insert([
 				{
-					user_id: $user.id,
+					user_id: user.id,
 					name: name.trim(),
-					description: description.trim() || null,
+					description: description.trim() || null
 				}
 			]);
 
@@ -75,14 +55,14 @@
 		<div class="error">{error}</div>
 	{/if}
 
-	<form on:submit|preventDefault={handleSubmit} class="bookshelf-form">
+	<form onsubmit={handleSubmit} class="bookshelf-form">
 		<div class="form-group">
 			<label for="name">Bookshelf Name *</label>
-			<input 
-				id="name" 
-				type="text" 
-				bind:value={name} 
-				required 
+			<input
+				id="name"
+				type="text"
+				bind:value={name}
+				required
 				placeholder="e.g., Fantasy Novels, Work Reading, etc."
 				disabled={loading}
 			/>
@@ -90,9 +70,9 @@
 
 		<div class="form-group">
 			<label for="description">Description</label>
-			<textarea 
-				id="description" 
-				bind:value={description} 
+			<textarea
+				id="description"
+				bind:value={description}
 				placeholder="Optional description for this bookshelf..."
 				rows="3"
 				disabled={loading}
@@ -100,7 +80,12 @@
 		</div>
 
 		<div class="form-actions">
-			<button type="button" class="cancel-btn" on:click={() => goto('/bookshelves')} disabled={loading}>
+			<button
+				type="button"
+				class="cancel-btn"
+				onclick={() => goto('/bookshelves')}
+				disabled={loading}
+			>
 				Cancel
 			</button>
 			<button type="submit" class="submit-btn" disabled={loading || !name.trim()}>
@@ -183,7 +168,8 @@
 		color: #333;
 	}
 
-	input, textarea {
+	input,
+	textarea {
 		width: 100%;
 		padding: 0.75rem;
 		border: 2px solid #e0e0e0;
@@ -193,59 +179,16 @@
 		box-sizing: border-box;
 	}
 
-	input:focus, textarea:focus {
+	input:focus,
+	textarea:focus {
 		outline: none;
 		border-color: #667eea;
 	}
 
-	input:disabled, textarea:disabled {
+	input:disabled,
+	textarea:disabled {
 		background: #f5f5f5;
 		color: #999;
-	}
-
-	.color-picker {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-		gap: 0.75rem;
-		margin-top: 0.5rem;
-	}
-
-	.color-option {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.5rem;
-		border: 2px solid #e0e0e0;
-		border-radius: 6px;
-		cursor: pointer;
-		transition: all 0.2s;
-	}
-
-	.color-option:hover {
-		border-color: #ccc;
-		background: #f9f9f9;
-	}
-
-	.color-option input[type="radio"] {
-		width: auto;
-		margin: 0;
-	}
-
-	.color-option input[type="radio"]:checked + .color-circle {
-		transform: scale(1.2);
-		box-shadow: 0 0 0 2px white, 0 0 0 4px var(--color);
-	}
-
-	.color-circle {
-		width: 20px;
-		height: 20px;
-		border-radius: 50%;
-		transition: transform 0.2s;
-	}
-
-	.color-name {
-		font-size: 0.9rem;
-		color: #666;
 	}
 
 	.form-actions {
@@ -311,7 +254,11 @@
 	}
 
 	.preview-header {
-		background: linear-gradient(135deg, var(--shelf-color), color-mix(in srgb, var(--shelf-color) 80%, white));
+		background: linear-gradient(
+			135deg,
+			var(--shelf-color),
+			color-mix(in srgb, var(--shelf-color) 80%, white)
+		);
 		color: white;
 		padding: 1rem;
 	}
