@@ -1,95 +1,173 @@
 <script lang="ts">
-	import { supabase } from '$lib/supabaseClient';
-	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
-	import { user } from '$lib/stores/auth';
 	import AccountModal from '$lib/components/AccountModal.svelte';
-    import Button from '$lib/components/Button.svelte';
+	import Button from '$lib/components/Button.svelte';
+	import { goto, invalidateAll } from '$app/navigation';
+	import type { PageData } from '../$types';
+	import { page } from '$app/state';
 
-	let email = '';
-	let password = '';
-	let username = '';
-	let error = '';
-	let loading = false;
+	let { data } = $props();
 
-	onMount(() => {
-		if ($user) {
-			goto('/');
+	let email = $state('');
+	let password = $state('');
+	let username = $state('');
+	let error = $state('');
+	let loading = $state(false);
+	let usernameError = $state('');
+	let checkingUsername = $state(false);
+	let usernameAvailable = $state(); // null | true | false
+
+	// Debounce timer
+	let usernameCheckTimeout: any;
+
+	// Check username availability
+	function handleUsernameInput() {
+		console.log('handling username input');
+		usernameError = '';
+		usernameAvailable = null;
+
+		// Clear previous timeout
+		clearTimeout(usernameCheckTimeout);
+
+		// Don't check if too short
+		if (username.length < 3) {
+			usernameError = 'Username must be at least 3 characters';
+			return;
 		}
-	});
 
-	async function handleSignup() {
-		error = '';
-		loading = true;
+		// Check for valid characters
+		if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+			usernameError = 'Username can only contain letters, numbers, hyphens, and underscores.';
+			return;
+		}
+
+		// Debounce: wait 500ms after user stops typing
+		usernameCheckTimeout = setTimeout(async () => {
+			await checkUsernameAvailability();
+		}, 500);
+	}
+
+	async function checkUsernameAvailability() {
+		checkingUsername = true;
 
 		try {
-			// Sign up user
-			const { data, error: signUpError } = await supabase.auth.signUp({
+			const { data: existingUsers, error: availabilityError } = await data.supabase
+				.from('users')
+				.select('username')
+				.eq('username', username)
+				.limit(1);
+
+			if (availabilityError) {
+				console.error('Error with username', availabilityError);
+				usernameError = 'Could not verify username availability.';
+				usernameAvailable = null;
+			} else if (existingUsers && existingUsers.length > 0) {
+				usernameError = 'This username is already taken.';
+				usernameAvailable = false;
+			} else {
+				usernameAvailable = true;
+			}
+		} catch (err) {
+			console.error('Username check failed:', err);
+			usernameError = 'Could not verify username availability.';
+			usernameAvailable = null;
+		} finally {
+			checkingUsername = false;
+		}
+	}
+
+	async function handleSignup() {
+		if (usernameAvailable === false) {
+			error = 'Please choose a different username';
+			return;
+		}
+
+		try {
+			loading = true;
+			error = '';
+
+			const { error: signUpError } = await data.supabase.auth.signUp({
 				email,
-				password
+				password,
+				options: {
+					data: {
+						username
+					}
+				}
 			});
 
 			if (signUpError) {
-				// Handle specific error messages
-				if (signUpError.message.includes('User already registered')) {
-					error = 'An account with this email already exists. Please try logging in instead.';
-				} else if (signUpError.message.includes('Password should be at least')) {
+				// Show user-friendly error messages
+				if (signUpError.message.includes('already registered')) {
+					error = 'This email is already registered. Try logging in instead.';
+				} else if (signUpError.message.includes('Password')) {
 					error = 'Password must be at least 6 characters long.';
-				} else if (signUpError.message.includes('Invalid email')) {
-					error = 'Please enter a valid email address.';
+				} else if (signUpError.message.includes('unique')) {
+					error = 'This username is already taken. Please choose another.';
 				} else {
 					error = signUpError.message;
 				}
 				return;
 			}
 
-			// Create profile
-			if (data.user) {
-				const { error: profileError } = await supabase.from('profiles').insert([
-					{
-						id: data.user.id,
-						username,
-						email
-					}
-				]);
-
-				if (profileError) {
-					error = 'Account created but profile setup failed. Please contact support.';
-					return;
-				}
-			}
-
-			// Show success message for email confirmation
-			if (data.user && !data.session) {
-				error =
-					'Account created! Please check your email to confirm your account before logging in.';
-				return;
-			}
-
+			await invalidateAll();
 			goto('/');
-		} catch (err) {
-			console.error('Error signing up:', err);
+		} catch (err: any) {
+			error = err.message || 'An unexpected error occurred. Please try again.';
+			console.error('Signup error:', err);
 		} finally {
 			loading = false;
 		}
 	}
+	// Derived state for button
+	let canSubmit = $derived(
+		email.length > 0 &&
+			password.length >= 6 &&
+			username.length >= 3 &&
+			usernameAvailable === true &&
+			!loading
+	);
 </script>
 
 <div class="container">
-    <AccountModal type="signup">
-        {#if error}
-			<div class="error" class:success={error.includes('Account created!')}>{error}</div>
+	<AccountModal type="signup">
+		{#if error}
+			<div class="error" class:success={error.includes('Account created!')}>
+				{error}
+			</div>
 		{/if}
 
-		<form on:submit|preventDefault={handleSignup}>
+		<form onsubmit={handleSignup}>
 			<div class="form-group">
 				<label for="username">Username</label>
-				<input id="username" type="text" bind:value={username} required placeholder="johndoe" />
+				<input
+					id="username"
+					type="text"
+					bind:value={username}
+					oninput={handleUsernameInput}
+					required
+					disabled={loading}
+					minlength="3"
+					placeholder="username"
+				/>
+				{#if checkingUsername}
+					<small class="checking">Checking availability...</small>
+				{:else if usernameError}
+					<small class="error-text">{usernameError}</small>
+				{:else if usernameAvailable === true}
+					<small class="success-text">✓ Username available</small>
+				{/if}
 			</div>
 
 			<div class="form-group">
 				<label for="email">Email</label>
-				<input id="email" type="email" bind:value={email} required placeholder="you@example.com" />
+				<input
+					id="email"
+					type="email"
+					bind:value={email}
+					required
+					disabled={loading}
+					placeholder="you@example.com"
+				/>
 			</div>
 
 			<div class="form-group">
@@ -99,19 +177,19 @@
 					type="password"
 					bind:value={password}
 					required
+					disabled={loading}
 					placeholder="••••••••"
 					minlength="6"
 				/>
 			</div>
 
 			<div class="form-group">
-				<Button variant="primary" disabled={loading}>
+				<Button variant="primary" disabled={!canSubmit}>
 					{loading ? 'Creating account...' : 'Sign up'}
 				</Button>
 			</div>
 		</form>
-    </AccountModal>
-	
+	</AccountModal>
 </div>
 
 <style>
@@ -123,8 +201,8 @@
 
 	.form-group {
 		margin-bottom: 1rem;
-        display: flex;
-        flex-direction: column;
+		display: flex;
+		flex-direction: column;
 	}
 
 	label {
@@ -136,7 +214,7 @@
 	}
 
 	input {
-        padding: 1rem;
+		padding: 1rem;
 		border-radius: 8px;
 		border: none;
 	}
@@ -148,7 +226,7 @@
 	.error {
 		background: #fee;
 		color: #c33;
-        padding: 1rem;
+		padding: 1rem;
 		border-radius: 8px;
 		margin-bottom: 1rem;
 	}

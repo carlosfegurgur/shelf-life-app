@@ -1,47 +1,42 @@
 <script lang="ts">
-	import { supabase } from '$lib/supabaseClient';
-	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
-	import { user } from '$lib/stores/auth';
 	import AccountModal from '$lib/components/AccountModal.svelte';
 	import Button from '$lib/components/Button.svelte';
+	import { goto, invalidateAll } from '$app/navigation';
+	import { page } from '$app/state';
 
-	let email = '';
-	let password = '';
-	let error = '';
-	let loading = false;
+	let { data } = $props();
 
-	onMount(() => {
-		if ($user) {
-			goto('/');
-		}
-	});
+	let email = $state('');
+	let password = $state('');
+	let loading = $state(false);
+	let error = $state('');
 
 	async function handleLogin() {
-		error = '';
-		loading = true;
-
 		try {
-			const { error: loginError } = await supabase.auth.signInWithPassword({
+			loading = true;
+			error = '';
+			
+			const { error: loginError } = await data.supabase.auth.signInWithPassword({
 				email,
 				password
 			});
 
 			if (loginError) {
-				// Handle specific error messages
+				// Show user-friendly error message
 				if (loginError.message.includes('Invalid login credentials')) {
 					error = 'Invalid email or password. Please try again.';
 				} else if (loginError.message.includes('Email not confirmed')) {
-					error = 'Please check your email and click the confirmation link before logging in.';
+					error = 'Please confirm your email address before logging in.';
 				} else {
 					error = loginError.message;
 				}
-				return;
+				return; // Don't redirect on error
 			}
-
+			await invalidateAll();
 			goto('/');
-		} catch (err) {
-			console.error('Error with logging in:', err);
+		} catch (err: any) {
+			error = err.message || 'An unexpected error occurred. Please try again.';
+			console.error('Login error:', err);
 		} finally {
 			loading = false;
 		}
@@ -54,10 +49,17 @@
 			<div class="error">{error}</div>
 		{/if}
 
-		<form on:submit|preventDefault={handleLogin}>
+		<form onsubmit={handleLogin}>
 			<div class="form-group">
 				<label for="email">Email</label>
-				<input id="email" type="email" bind:value={email} required placeholder="you@example.com" />
+				<input
+					id="email"
+					type="email"
+					bind:value={email}
+					required
+					disabled={loading}
+					placeholder="you@example.com"
+				/>
 			</div>
 
 			<div class="form-group">
@@ -67,6 +69,7 @@
 					type="password"
 					bind:value={password}
 					required
+					disabled={loading}
 					placeholder="••••••••"
 				/>
 			</div>
@@ -107,10 +110,10 @@
 		border: none;
 	}
 
-    input:focus {
-        outline: none;
-        border-color: var(--bg-brand);
-    }
+	input:focus {
+		outline: none;
+		border-color: var(--bg-brand);
+	}
 
 	.error {
 		background: #fee;

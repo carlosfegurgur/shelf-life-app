@@ -1,36 +1,33 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { user, authInitialized, initAuth } from '$lib/stores/auth';
-	import { goto } from '$app/navigation';
-	import { supabase } from '$lib/supabaseClient';
-	import DesktopIcon from '$lib/assets/desktopIcon.svelte';
 	import '$lib/global.css';
+	import DesktopIcon from '$lib/assets/desktopIcon.svelte';
 	import MobileIcon from '$lib/assets/mobileIcon.svelte';
 	import Button from './Button.svelte';
+	import { goto, invalidateAll } from '$app/navigation';
 
-	onMount(() => {
-		initAuth();
-	});
-
-	// Redirect to login if user is not authenticated after auth is initialized
-	// $: if ($authInitialized && !$user) {
-	// 	goto('/login');
-	// }
+	import { page } from '$app/state';
+	let user = $derived(page.data.user);
+	let auth = $derived(page.data.supabase.auth);
 
 	async function handleLogout() {
-		await supabase.auth.signOut();
-		goto('/');
+		try {
+			await auth.signOut();
+			await invalidateAll();
+			goto('/');
+		} catch (error) {
+			console.error('Logout failed:', error);
+		}
 	}
-
-	const NavLinks = [
-		{ url: '/library', title: 'Library' },
-		{ url: '/bookshelves', title: 'Bookshelves' },
-		{ url: '/books/add', title: 'Add Book' },
-		{ url: '/profile', title: 'Profile' }
-	];
+	
+	// const NavLinks = [
+	// 	{ url: '/library', title: 'Library' },
+	// 	{ url: '/bookshelves', title: 'Bookshelves' },
+	// 	{ url: '/books/add', title: 'Add Book' },
+	// 	{ url: '/dashboard', title: 'Profile' }
+	// ];
 </script>
 
-{#if $authInitialized && $user}
+{#if user}
 	<nav>
 		<div class="nav-container">
 			<a href="/" class="mobile-logo"><MobileIcon height={40} width={100} /></a>
